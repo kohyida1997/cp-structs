@@ -1,4 +1,4 @@
-# CP (Competitive Programming) Structs
+# CP Structs
 Implementation of interesting Comp. Prog data structures and algorithms
 
 # Build Instructions
@@ -6,4 +6,5 @@ Implementation of interesting Comp. Prog data structures and algorithms
 - OR good ol' `mkdir build && cmake .. && make`
 
 # Running Tests
-- Currently need to manually run the binaries
+- Currently need to manually run the binaries after they are built
+- ie. inside `build/tests`
