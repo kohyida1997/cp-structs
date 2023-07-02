@@ -72,6 +72,8 @@ public:
   // O(log(n)): Compute func(left, right) for range  [left, right)
   // Pre-condition: right >= left && left >= 0 && MAXN >= right
   data_t computeForRange(size_t left, size_t right, data_t init) {
+    if (right <= left)
+      return init;
     auto intervalSize = right - left;
     auto largestPow = detail::fastLog2Floor(intervalSize);
     auto x = left;
@@ -96,6 +98,8 @@ public:
   // k = floor(log2(interval_size)) where interval_size = (right-left)
   // Pre-condition: right >= left && left >= 0 && MAXN >= right
   data_t computeOverlappingForRange(size_t left, size_t right, data_t init) {
+    if (right <= left)
+      return init;
     auto largestPowFloor = detail::fastLog2Floor(right - left);
     data_t ret = init;
     auto funcInstance = lambda_t{};
