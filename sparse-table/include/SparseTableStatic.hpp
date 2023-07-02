@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <iostream>
 #include <stdexcept>
 
 namespace ykoh {
@@ -68,15 +69,15 @@ public:
     }
   }
 
-  // Compute func(left, right) for range  [left, right)
+  // O(log(n)): Compute func(left, right) for range  [left, right)
   // Pre-condition: right >= left && left >= 0 && MAXN >= right
-  data_t computeForRange(size_t left, size_t right, data_t identity) {
+  data_t computeForRange(size_t left, size_t right, data_t init) {
     auto intervalSize = right - left;
     auto largestPow = detail::fastLog2Floor(intervalSize);
     auto x = left;
     auto y = right;
     auto funcInstance = lambda_t{};
-    data_t res = identity;
+    data_t res = init;
 
     for (auto i = largestPow; i >= 0; --i) {
       size_t currIntervalSize = 1 << i;
@@ -87,6 +88,20 @@ public:
     }
 
     return res;
+  }
+
+  // O(1): Compute across two overlapping sub-ranges of [left, right) such that
+  // every single element is included at least once. More specifically, it
+  // computes func(func(left, left + 2^k), func(right - 2^k, right)) where
+  // k = floor(log2(interval_size)) where interval_size = (right-left)
+  // Pre-condition: right >= left && left >= 0 && MAXN >= right
+  data_t computeOverlappingForRange(size_t left, size_t right, data_t init) {
+    auto largestPowFloor = detail::fastLog2Floor(right - left);
+    data_t ret = init;
+    auto funcInstance = lambda_t{};
+    ret = funcInstance(ret, tb[largestPowFloor][left]);
+    return funcInstance(ret,
+                        tb[largestPowFloor][right - (1 << largestPowFloor)]);
   }
 };
 
