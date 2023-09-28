@@ -20,4 +20,4 @@ target_compile_options(${BINARY}_lib PRIVATE -Wall -Wextra -pedantic)
 target_compile_features(${BINARY}_lib PRIVATE cxx_std_20)
 
 # Set include directories name
-set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include/fixed_size)
+set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include)
