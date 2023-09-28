@@ -11,8 +11,10 @@ enable_testing()
 
 include_directories(
   sparse-table
+  robinhood
   tests
 )
 
+add_subdirectory(robinhood)
 add_subdirectory(sparse-table)
 add_subdirectory(tests)
