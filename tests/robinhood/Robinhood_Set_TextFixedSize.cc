@@ -34,7 +34,8 @@ void testVectorMap() {
   // Now fill to the brim
   while (s.size() != vMapCapacity) {
     auto newKey = gen32();
-    if (!s.insert(newKey).second) continue;
+    if (!s.insert(newKey).second)
+      continue;
     assertEquals(vMap.insert(newKey), true);
   }
 
