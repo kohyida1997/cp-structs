@@ -2,17 +2,17 @@
 
 #include <sstream>
 #include <stdexcept>
-
+#include <type_traits> 
 namespace ykoh {
 namespace test_utils {
 
 template <typename T>
-concept EqualComparable = requires(T &&x, T &&y) {
+concept EqualComparable = requires(T x, T y) {
   x == y;
   x != y;
 };
 
-template <EqualComparable T> void assertEquals(T &&expected, T &&actual) {
+template <EqualComparable T> void assertEquals(T expected, T actual) {
   if (expected != actual) {
     std::stringstream ss;
     ss << "Assertion failed: ";

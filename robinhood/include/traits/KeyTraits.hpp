@@ -2,6 +2,7 @@
 
 #include <IntMurMurHash3.hpp>
 #include <type_traits>
+#include <functional>
 
 template <class KeyType>
 struct KeyTraits {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 
 // Stolen from:
 // https://github.com/martinus/robin-hood-hashing/blob/master/src/include/robin_hood.h

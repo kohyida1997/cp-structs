@@ -1,7 +1,10 @@
 #pragma once
 
 #include <KeyTraits.hpp>
+#include <algorithm>
+#include <cstddef>
 #include <functional>
+#include <iostream>
 #include <type_traits>
 #include <vector>
 
@@ -11,13 +14,16 @@ namespace robinhood {
 // If size (defaults to zero) is 0, then default to dynamic allocation
 // using a std::vector, else use a std::array
 static constexpr size_t DYNAMIC_SIZE = 0;
-template <size_t N>
-struct is_dynamic_alloc_size : std::false_type {};
-template <>
-struct is_dynamic_alloc_size<0> : std::true_type {};
+static consteval bool isDynamicAllocSize(size_t N) {
+  return N == 0;
+}
+static consteval bool isStaticAllocSize(size_t N) {
+  return N > 0;
+}
 
 template <class Key, size_t N = DYNAMIC_SIZE, class Traits = KeyTraits<Key>>
-requires(N >= DYNAMIC_SIZE) class robinhood_set_fixed {
+requires(isDynamicAllocSize(N) or
+         isStaticAllocSize(N)) class robinhood_set_fixed {
   // Typedefs
   using HasherFunc = typename Traits::Hasher;
   using KeyEqualCmpFunc = typename Traits::EqualTo;
@@ -34,12 +40,16 @@ requires(N >= DYNAMIC_SIZE) class robinhood_set_fixed {
     inline constexpr bool isEmpty() const noexcept { return !occupied; }
     inline constexpr void setOccupied() noexcept { occupied = true; }
     inline constexpr void setEmpty() noexcept { occupied = false; }
+    inline constexpr void reset() noexcept {
+      setEmpty();
+      psl = 0;
+      // key = Key{};
+    }
     constexpr Entry() = default;
     constexpr Entry(Key k) : key(std::move(k)), occupied{true}, psl{0} {}
   };
-  static_assert(sizeof(Entry) == 8, "oops too big");
 
-  using BucketsT = std::conditional_t<N == DYNAMIC_SIZE,
+  using BucketsT = std::conditional_t<isDynamicAllocSize(N),
                                       std::vector<Entry>,
                                       std::array<Entry, N>>;
   using BucketIterT = typename BucketsT::iterator;
@@ -56,26 +66,25 @@ requires(N >= DYNAMIC_SIZE) class robinhood_set_fixed {
     if (++pos >= capacity())
       pos -= capacity();
   }
+  auto begin() noexcept { return buckets.begin(); }
 
  public:
   // Default construct enabled only if using static alloc
   // Note that for SFINAE to work, it has to check based on template params
   // of the function itself, not at the class level. Hence we use _N = N
-  template <
-      size_t _N = N,
-      class = typename std::enable_if_t<!is_dynamic_alloc_size<_N>::value>>
-  constexpr robinhood_set_fixed() : buckets{} {}
+  template <size_t _N = N>
+  requires(isStaticAllocSize(_N)) constexpr robinhood_set_fixed() : buckets{} {}
 
   // Param construct enabled only if using dynamic alloc (uses std::vector)
-  template <size_t _N = N,
-            class = typename std::enable_if_t<is_dynamic_alloc_size<_N>::value>>
-  constexpr explicit robinhood_set_fixed(SizeT fixedCapacity)
+  template <size_t _N = N>
+  requires(isDynamicAllocSize(_N)) constexpr explicit robinhood_set_fixed(
+      SizeT fixedCapacity)
       : buckets(fixedCapacity) {}
 
   // Copies key, returns true if inserted
   inline bool insert(Key k) {
     // full, cannot insert anymore
-    if (sz == capacity())
+    if (isFull())
       return false;
 
     Entry incomingEntry(k);
@@ -102,8 +111,8 @@ requires(N >= DYNAMIC_SIZE) class robinhood_set_fixed {
     return ++sz, true;
   }
 
-  // inline bool erase(Key k) noexcept;
-  inline auto find(Key k) noexcept {
+  // Find returns an iterator to the Entry
+  inline auto find(const Key& k) noexcept {
     auto searchPos = computeHomePosition(k);
     ProbeSeqLenT currPsl = 0;
     while (currPsl < capacity() && !buckets[searchPos].isEmpty() &&
@@ -113,23 +122,51 @@ requires(N >= DYNAMIC_SIZE) class robinhood_set_fixed {
         return begin() + searchPos;
       ++currPsl, advancePosition(searchPos);
     }
-
     return end();
   }
 
-  // Capacity
-  inline constexpr size_t capacity() const noexcept { return buckets.size(); }
+  // Erase returns true if the requested Key is found and deleted
+  // Does backshift deletion to avoid tombstones
+  inline bool erase(const Key& k) noexcept {
+    // Find the key first
+    auto it = find(k);
+    if (it == end())
+      return false;
+
+    PositionT bucketIdxToDelete = std::distance(begin(), it);
+    PositionT currPos = bucketIdxToDelete;
+    PositionT nextPos = currPos;
+    advancePosition(nextPos);
+    // Shift backwards until no more key (wraps around)
+    for (; nextPos != bucketIdxToDelete && !buckets[nextPos].isEmpty() &&
+           buckets[nextPos].psl > 0;
+         advancePosition(currPos), advancePosition(nextPos)) {
+      const auto& nextElem = buckets[nextPos];
+      auto& currElem = buckets[currPos];
+      currElem = nextElem;
+      currElem.psl--;
+    }
+    return --sz, true;
+  }
+
+  // Capacity and fullness
+  inline constexpr SizeT capacity() const noexcept { return buckets.size(); }
+  inline bool isFull() const noexcept { return sz == capacity(); }
+  inline constexpr SizeT size() const noexcept { return sz; }
 
   // Iters
-  auto begin() noexcept { return buckets.begin(); }
   auto end() noexcept { return buckets.end(); }
 
   void clear() noexcept {
-    for (auto& e : buckets) {
-      e.setEmpty();
-      e.psl = 0;
-    }
+    for (auto& e : buckets)
+      e.reset();
   }
+
+  // Accessor to raw buffer
+  inline constexpr auto data() { return begin(); }
+
+  // Observers
+  inline constexpr auto hash_function() noexcept { return HasherFunc{}; }
 };
 }  // namespace robinhood
 }  // namespace ykoh
