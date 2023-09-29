@@ -12,8 +12,8 @@
 
 using u32 = uint32_t;
 
-template <typename LambdaFunc, typename T> void testWithFunc(T funcInit) {
-
+template <typename LambdaFunc, typename T>
+void testWithFunc(T funcInit) {
   constexpr u32 dataSize = 1024;
 
   std::mt19937 gen32(std::random_device{}());
@@ -31,6 +31,7 @@ template <typename LambdaFunc, typename T> void testWithFunc(T funcInit) {
 
   auto funcInstance = LambdaFunc{};
 
+  // TODO: Parallelize testing
   // Check all possible ranges for the sums
   for (u32 start = 0; start < testData1.size(); ++start) {
     // end is exclusive
