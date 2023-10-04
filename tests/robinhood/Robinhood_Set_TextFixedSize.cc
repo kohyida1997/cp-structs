@@ -91,11 +91,6 @@ void testMap() {
       std::cout << "!! Just Deleted (Key = " << k << ")\n"
                 << "   but found ";
       printEntryAtBucket(*it, std::distance(testMap.data().begin(), it));
-
-      // std::printf("!! Just Deleted Key = %d, but found Entry "
-      // "(key = %d, bucket = %ld, psl = %d, occupied = %s)\n\n",
-      //   k, it->key, std::distance(testMap.data().begin(), it), it->psl,
-      //   (it->isOccupied() ? "YES" : "EMPTY"));
     }
   }
 
@@ -121,6 +116,7 @@ void testMap() {
     assertEquals(0u, e.psl);
     assertEquals(true, e.isEmpty());
   }
+  assertEquals(testMap.size(), 0ul);
 
   std::cout << "Test Passed!" << std::endl;
 }

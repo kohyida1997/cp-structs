@@ -14,6 +14,7 @@
 
 namespace ykoh {
 namespace robinhood {
+
 // Allocation strategy is determined based on size
 // If size (defaults to zero) is 0, then default to dynamic allocation
 // using a std::vector, else use a std::array
@@ -24,6 +25,89 @@ static consteval bool isDynamicAllocSize(size_t N) {
 static consteval bool isStaticAllocSize(size_t N) {
   return N > 0;
 }
+
+// Memory layout choices
+// Single Flat array containing keys only, PSL not stored
+template <class KeyT, size_t N = DYNAMIC_SIZE, class Traits = KeyTraits<KeyT>>
+struct KeyOnlyContainer {
+  // Typedefs
+  using OccupiedFlag = bool;
+  using ProbeSeqLenT = uint32_t;
+  using HasherFunc = typename Traits::Hasher;
+  using KeyEqualCmpFunc = typename Traits::EqualTo;
+  using SizeT = std::size_t;
+
+  struct Entry {
+    // Members
+    OccupiedFlag occupied;
+    KeyT key;
+    // Ctrs
+    constexpr Entry() = default;
+    constexpr Entry(KeyT k) : key(std::move(k)), occupied{true} {}
+    // Methods
+    void constexpr reset() noexcept { occupied = false; }
+    inline constexpr bool isOccupied() const noexcept { return occupied; }
+    inline constexpr bool isEmpty() const noexcept { return !isOccupied(); }
+    inline constexpr void setOccupied() noexcept { occupied = true; }
+    inline constexpr void setEmpty() noexcept { occupied = false; }
+  };
+
+  using ContainerT = std::conditional_t<isDynamicAllocSize(N),
+                                        std::vector<Entry>,
+                                        std::array<Entry, N>>;
+  using PositionT = SizeT;
+
+  // Members
+  ContainerT buckets;
+
+  // Ctrs
+  template <size_t _N = N>
+  requires(isStaticAllocSize(_N)) constexpr KeyOnlyContainer() : buckets{} {}
+
+  // Param construct enabled only if using dynamic alloc (uses std::vector)
+  template <size_t _N = N>
+  requires(isDynamicAllocSize(_N)) constexpr explicit KeyOnlyContainer(
+      SizeT fixedCapacity)
+      : buckets(fixedCapacity) {}
+
+  // Operations on positions in the container
+
+  inline constexpr bool occupiedAtPos(PositionT pos) noexcept {
+    return buckets[pos].isOccupied();
+  }
+
+  // Calculate PSL on the fly
+  inline constexpr PositionT pslAtPos(PositionT pos) {
+    auto homePos = HasherFunc{}(buckets[pos].key) % capacity();
+    if (pos < homePos)
+      pos += capacity();
+    return pos - homePos;
+  }
+
+  inline constexpr KeyT& keyAtPos(PositionT pos) noexcept {
+    return buckets[pos].key;
+  }
+
+  inline constexpr bool isOccupiedAtPos(PositionT pos) noexcept {
+    return buckets[pos].isOccupied();
+  }
+  inline constexpr bool isEmptyAtPos(PositionT pos) noexcept {
+    return buckets[pos].isEmpty();
+  }
+  inline constexpr bool setOccupiedAtPos(PositionT pos) noexcept {
+    return buckets[pos].setOccupied();
+  }
+  inline constexpr bool setEmptyAtPos(PositionT pos) noexcept {
+    return buckets[pos].setEmpty();
+  }
+  inline constexpr PositionT capacity() const noexcept {
+    return buckets.size();
+  }
+  inline constexpr void swapElemsAtPos(PositionT posX, PositionT posY) {
+    std::swap(buckets[posX], buckets[posY]);
+  }
+  inline constexpr auto end() const noexcept { return buckets.end(); }
+};
 
 template <class Key, size_t N = DYNAMIC_SIZE, class Traits = KeyTraits<Key>>
 requires(isDynamicAllocSize(N) or
