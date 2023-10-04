@@ -190,6 +190,7 @@ requires(isDynamicAllocSize(N) or
   }
 
   void clear() noexcept {
+    sz = 0;
     for (auto& e : buckets)
       e.reset();
   }
